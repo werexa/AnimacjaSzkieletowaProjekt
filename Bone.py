@@ -1,5 +1,5 @@
 import pyrr
-from pyrr import Matrix44, Quaternion, Vector3, mix
+from pyrr import Matrix44, Quaternion, Vector3
 from pyrr.quaternion import slerp as quat_slerp, normalize as quat_normalize
 
 class KeyPosition:
@@ -102,7 +102,7 @@ class Bone:
         p1Index = p0Index + 1
         scaleFactor = self.GetScaleFactor(self.m_Positions[p0Index].timeStamp,
             self.m_Positions[p1Index].timeStamp, animationTime)
-        finalPosition = mix(self.m_Positions[p0Index].position, self.m_Positions[p1Index].position, scaleFactor)
+        finalPosition = self.m_Positions[p0Index].position * (1.0 - scaleFactor) + self.m_Positions[p1Index].position * scaleFactor
         return Matrix44.from_translation(finalPosition)
 
     def InterpolateRotation(self, animationTime):
@@ -126,5 +126,5 @@ class Bone:
         p1Index = p0Index + 1
         scaleFactor = self.GetScaleFactor(self.m_Scales[p0Index].timeStamp,
             self.m_Scales[p1Index].timeStamp, animationTime)
-        finalScale = mix(self.m_Scales[p0Index].scale, self.m_Scales[p1Index].scale, scaleFactor)
+        finalScale = self.m_Scales[p0Index].scale * (1.0 - scaleFactor) + self.m_Scales[p1Index].scale * scaleFactor
         return Matrix44.from_scale(finalScale)

@@ -1,40 +1,41 @@
 import os
 from pathlib import Path
-import glm
+import pyrr
 import pyassimp
 from pyassimp.postprocess import (
     aiProcess_Triangulate,
     aiProcess_GenSmoothNormals,
     aiProcess_CalcTangentSpace,
 )
+from OpenGL.GL import glGenTextures, glBindTexture, glTexImage2D, glGenerateMipmap, GL_TEXTURE_2D, GL_RGBA, GL_UNSIGNED_BYTE
 
 MAX_BONE_INFLUENCE = 4
 
 class KeyPosition:
     def __init__(self):
-        self.position = glm.vec3(0.0)
+        self.position = pyrr.Vector3([0.0])
         self.timeStamp = 0.0
 
 class KeyRotation:
     def __init__(self):
-        self.orientation = glm.quat()
+        self.orientation = pyrr.Quaternion()
         self.timeStamp = 0.0
 
 class KeyScale:
     def __init__(self):
-        self.scale = glm.vec3(1.0)
+        self.scale = pyrr.Vector3([1.0])
         self.timeStamp = 0.0
 
 class BoneInfo:
     def __init__(self):
         self.id = -1
-        self.offset = glm.mat4(1.0)
+        self.offset = pyrr.Matrix44.identity()
 
 class Vertex:
     def __init__(self):
-        self.Position = glm.vec3(0.0)
-        self.Normal = glm.vec3(0.0)
-        self.TexCoords = glm.vec2(0.0)
+        self.Position = pyrr.Vector3([0.0])
+        self.Normal = pyrr.Vector3([0.0])
+        self.TexCoords = pyrr.Vector2([0.0])
         self.m_BoneIDs = [-1] * MAX_BONE_INFLUENCE
         self.m_Weights = [0.0] * MAX_BONE_INFLUENCE
 
@@ -93,7 +94,7 @@ class Model:
             if boneName not in self.m_BoneInfoMap:
                 newBoneInfo = BoneInfo()
                 newBoneInfo.id = self.m_BoneCounter
-                newBoneInfo.offset = glm.mat4(*bone.offset_matrix)
+                newBoneInfo.offset = pyrr.Matrix44(bone.offset_matrix)
                 self.m_BoneInfoMap[boneName] = newBoneInfo
                 boneID = self.m_BoneCounter
                 self.m_BoneCounter += 1
@@ -113,13 +114,13 @@ class Model:
         for i in range(mesh.num_vertices):
             vertex = Vertex()
             self.set_vertex_bone_data_to_default(vertex)
-            vertex.Position = glm.vec3(*mesh.vertices[i])
-            vertex.Normal = glm.vec3(*mesh.normals[i])
+            vertex.Position = pyrr.Vector3(mesh.vertices[i])
+            vertex.Normal = pyrr.Vector3(mesh.normals[i])
 
             if mesh.texturecoords:
-                vertex.TexCoords = glm.vec2(*mesh.texturecoords[0][i][:2])
+                vertex.TexCoords = pyrr.Vector2(mesh.texturecoords[0][i][:2])
             else:
-                vertex.TexCoords = glm.vec2(0.0, 0.0)
+                vertex.TexCoords = pyrr.Vector2([0.0, 0.0])
 
             vertices.append(vertex)
 

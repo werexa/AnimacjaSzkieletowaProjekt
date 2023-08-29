@@ -45,10 +45,10 @@ class Animator:
         return self.m_FinalBoneMatrices
 
 # Example usage
-if __name__ == "__main__":
-    # Assume you have defined the necessary Animation and AssimpNodeData classes
-    animation = Animation()  # Replace with actual Animation instance
-    animator = Animator(animation)
-    animator.update_animation(0.1)  # Update the animation with a time step of 0.1 seconds
-    final_bone_matrices = animator.get_final_bone_matrices()
-    print(final_bone_matrices)
+# if __name__ == "__main__":
+#     # Assume you have defined the necessary Animation and AssimpNodeData classes
+#     animation = Animation()  # Replace with actual Animation instance
+#     animator = Animator(animation)
+#     animator.update_animation(0.1)  # Update the animation with a time step of 0.1 seconds
+#     final_bone_matrices = animator.get_final_bone_matrices()
+#     print(final_bone_matrices)

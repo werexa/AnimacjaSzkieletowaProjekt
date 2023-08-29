@@ -1,6 +1,7 @@
 import OpenGL.GL as gl
-import glm
+import pyrr
 import os
+
 
 class Shader:
     def __init__(self, vertex_path, fragment_path):
@@ -49,42 +50,45 @@ class Shader:
 
     def set_vec2(self, name, value):
         location = gl.glGetUniformLocation(self.ID, name)
-        gl.glUniform2fv(location, 1, glm.value_ptr(value))
+        gl.glUniform2fv(location, 1, value)
 
     def set_vec3(self, name, value):
         location = gl.glGetUniformLocation(self.ID, name)
-        gl.glUniform3fv(location, 1, glm.value_ptr(value))
+        gl.glUniform3fv(location, 1, value)
 
     def set_vec4(self, name, value):
         location = gl.glGetUniformLocation(self.ID, name)
-        gl.glUniform4fv(location, 1, glm.value_ptr(value))
+        gl.glUniform4fv(location, 1, value)
 
     def set_mat2(self, name, value):
         location = gl.glGetUniformLocation(self.ID, name)
-        gl.glUniformMatrix2fv(location, 1, gl.GL_FALSE, glm.value_ptr(value))
+        gl.glUniformMatrix2fv(location, 1, gl.GL_FALSE, value)
 
     def set_mat3(self, name, value):
         location = gl.glGetUniformLocation(self.ID, name)
-        gl.glUniformMatrix3fv(location, 1, gl.GL_FALSE, glm.value_ptr(value))
+        gl.glUniformMatrix3fv(location, 1, gl.GL_FALSE, value)
 
     def set_mat4(self, name, value):
         location = gl.glGetUniformLocation(self.ID, name)
-        gl.glUniformMatrix4fv(location, 1, gl.GL_FALSE, glm.value_ptr(value))
+        gl.glUniformMatrix4fv(location, 1, gl.GL_FALSE, value)
 
     def check_compile_errors(self, shader, type_):
         if type_ != "PROGRAM":
             success = gl.glGetShaderiv(shader, gl.GL_COMPILE_STATUS)
             if not success:
                 info_log = gl.glGetShaderInfoLog(shader).decode()
-                print(f"ERROR::SHADER_COMPILATION_ERROR of type: {type_}\n{info_log}")
+                print(
+                    f"ERROR::SHADER_COMPILATION_ERROR of type: {type_}\n{info_log}")
         else:
             success = gl.glGetProgramiv(shader, gl.GL_LINK_STATUS)
             if not success:
                 info_log = gl.glGetProgramInfoLog(shader).decode()
-                print(f"ERROR::PROGRAM_LINKING_ERROR of type: {type_}\n{info_log}")
+                print(
+                    f"ERROR::PROGRAM_LINKING_ERROR of type: {type_}\n{info_log}")
 
-# Example usage
-if __name__ == "__main__":
-    shader = Shader("vertex_shader.glsl", "fragment_shader.glsl")
-    shader.use()
-    # Set shader uniforms and rendering code goes here
+
+# # Example usage
+# if __name__ == "__main__":
+#     shader = Shader("vertex_shader.glsl", "fragment_shader.glsl")
+#     shader.use()
+#     # Set shader uniforms and rendering code goes here

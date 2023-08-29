@@ -1,7 +1,11 @@
 import glfw
-import glm
 import pyrr
+import Shader
+import Animator
+import Animation
+import model_animation as ma
 import numpy as np
+import pathlib
 import OpenGL as gl
 from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram, compileShader
@@ -128,33 +132,19 @@ def main():
     glEnable(GL_DEPTH_TEST)
 
     # Shader setup (you'll need to replace this with loading shaders)
-    vertex_shader = """
-    #version 330 core
-    layout (location = 0) in vec3 aPos;
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 projection;
-    void main()
-    {
-        gl_Position = projection * view * model * vec4(aPos, 1.0);
-    }
-    """
-    fragment_shader = """
-    #version 330 core
-    out vec4 FragColor;
-    void main()
-    {
-        FragColor = vec4(1.0, 0.5, 0.2, 1.0);
-    }
-    """
 
-    shader_program = compileProgram(
-        compileShader(vertex_shader, GL_VERTEX_SHADER),
-        compileShader(fragment_shader, GL_FRAGMENT_SHADER)
-    )
-    glUseProgram(shader_program)
+    outShader = Shader("anim_model.vs", "anim_model.fs")
 
-    camera = Camera(camera_pos)
+    ourModel = ma.Model(pathlib.Path("resources/objects/vampire/dancing_vampire.dae"))
+    danceAnimation = Animation(pathlib.Path("resources/objects/vampire/dancing_vampire.dae"),ourModel)
+    animator = Animator(danceAnimation)
+    # shader_program = compileProgram(
+    #     compileShader(vertex_shader, GL_VERTEX_SHADER),
+    #     compileShader(fragment_shader, GL_FRAGMENT_SHADER)
+    # )
+    # glUseProgram(shader_program)
+
+    # camera = Camera(camera_pos)
 
     # Loop until the user closes the window
     while not glfw.window_should_close(window):
@@ -163,10 +153,13 @@ def main():
         lastFrame = current_frame
 
         process_input(window)
+        animator.update_animation(deltaTime)
 
         glClearColor(0.05, 0.05, 0.05, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
+        #enable shader
+        outShader.use()
         projection = pyrr.matrix44.create_perspective_projection_matrix(
             45.0,                   # FOV (field of view)
             SCR_WIDTH / SCR_HEIGHT, # Aspect ratio
@@ -176,14 +169,22 @@ def main():
 
         # projection = glm.perspective(glm.radians(camera.fov), SCR_WIDTH / SCR_HEIGHT, 0.1, 100.0)
         view = camera.get_view_matrix()
+        outShader.set_mat4("projection", projection)
+        outShader.set_mat4("view", view)
+        # glUniformMatrix4fv(glGetUniformLocation(shader_program, "projection"), 1, GL_FALSE, projection)
+        # glUniformMatrix4fv(glGetUniformLocation(shader_program, "view"), 1, GL_FALSE, view)
 
-        glUniformMatrix4fv(glGetUniformLocation(shader_program, "projection"), 1, GL_FALSE, projection)
-        glUniformMatrix4fv(glGetUniformLocation(shader_program, "view"), 1, GL_FALSE, view)
+        transforms = animator.get_final_bone_matrices()
+        for i in range(len(transforms)):
+            outShader.set_mat4("finalBonesMatrices[" + str(i) + "]", transforms[i])
+        # glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, model)
 
+        # Render model
         model = pyrr.Matrix44.from_translation(pyrr.Vector3([0.0, 0.0, 0.0]))  # Przykładowa macierz modelu
-        glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, model)
-
-        # Render code goes here
+        model = pyrr.translate(model, (0.0, -0.4, 0.0))  # translate it down so it's at the center of the scene
+        model = pyrr.scale(model, (0.5, 0.5, 0.5))
+        outShader.set_mat4("model", model)
+        ourModel.Draw(outShader)
 
         glfw.swap_buffers(window)
         glfw.poll_events()
