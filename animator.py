@@ -1,20 +1,20 @@
-import glm
+import pyrr
 from typing import List, Dict
-import Bone
+import Bone  # Import Bone class if available
 
 class Animator:
     def __init__(self, animation):
         self.m_CurrentTime = 0.0
         self.m_CurrentAnimation = animation
 
-        self.m_FinalBoneMatrices = [glm.mat4(1.0) for _ in range(100)]
+        self.m_FinalBoneMatrices = [pyrr.Matrix44.identity() for _ in range(100)]
 
     def update_animation(self, dt):
         self.m_DeltaTime = dt
         if self.m_CurrentAnimation:
             self.m_CurrentTime += self.m_CurrentAnimation.get_ticks_per_second() * dt
             self.m_CurrentTime = self.m_CurrentTime % self.m_CurrentAnimation.get_duration()
-            self.calculate_bone_transform(self.m_CurrentAnimation.get_root_node(), glm.mat4(1.0))
+            self.calculate_bone_transform(self.m_CurrentAnimation.get_root_node(), pyrr.Matrix44.identity())
 
     def play_animation(self, animation):
         self.m_CurrentAnimation = animation
@@ -30,13 +30,13 @@ class Animator:
             bone.update(self.m_CurrentTime)
             node_transform = bone.get_local_transform()
 
-        global_transformation = parent_transform * node_transform
+        global_transformation = parent_transform @ node_transform
 
         bone_info_map = self.m_CurrentAnimation.get_bone_id_map()
         if node_name in bone_info_map:
             index = bone_info_map[node_name].id
             offset = bone_info_map[node_name].offset
-            self.m_FinalBoneMatrices[index] = global_transformation * offset
+            self.m_FinalBoneMatrices[index] = global_transformation @ offset
 
         for child in node.children:
             self.calculate_bone_transform(child, global_transformation)

@@ -1,28 +1,27 @@
-import glm
-import math
-from glm import mix, normalize, toMat4, translate
-from glm.gtc.quaternion import normalize as quat_normalize, slerp as quat_slerp
+import pyrr
+from pyrr import Matrix44, Quaternion, Vector3, mix
+from pyrr.quaternion import slerp as quat_slerp, normalize as quat_normalize
 
 class KeyPosition:
     def __init__(self):
-        self.position = glm.vec3(0.0)
+        self.position = Vector3([0.0, 0.0, 0.0])
         self.timeStamp = 0.0
 
 class KeyRotation:
     def __init__(self):
-        self.orientation = glm.quat()
+        self.orientation = Quaternion()
         self.timeStamp = 0.0
 
 class KeyScale:
     def __init__(self):
-        self.scale = glm.vec3(1.0)
+        self.scale = Vector3([1.0, 1.0, 1.0])
         self.timeStamp = 0.0
 
 class Bone:
     def __init__(self, name, ID, channel):
         self.m_Name = name
         self.m_ID = ID
-        self.m_LocalTransform = glm.mat4(1.0)
+        self.m_LocalTransform = Matrix44.identity()
         self.m_NumPositions = channel.mNumPositionKeys
 
         self.m_Positions = []
@@ -30,7 +29,7 @@ class Bone:
             aiPosition = channel.mPositionKeys[positionIndex].mValue
             timeStamp = channel.mPositionKeys[positionIndex].mTime
             data = KeyPosition()
-            data.position = glm.vec3(aiPosition.x, aiPosition.y, aiPosition.z)
+            data.position = Vector3([aiPosition.x, aiPosition.y, aiPosition.z])
             data.timeStamp = timeStamp
             self.m_Positions.append(data)
 
@@ -40,7 +39,7 @@ class Bone:
             aiOrientation = channel.mRotationKeys[rotationIndex].mValue
             timeStamp = channel.mRotationKeys[rotationIndex].mTime
             data = KeyRotation()
-            data.orientation = glm.quat(aiOrientation.w, aiOrientation.x, aiOrientation.y, aiOrientation.z)
+            data.orientation = Quaternion([aiOrientation.w, aiOrientation.x, aiOrientation.y, aiOrientation.z])
             data.timeStamp = timeStamp
             self.m_Rotations.append(data)
 
@@ -50,7 +49,7 @@ class Bone:
             scale = channel.mScalingKeys[keyIndex].mValue
             timeStamp = channel.mScalingKeys[keyIndex].mTime
             data = KeyScale()
-            data.scale = glm.vec3(scale.x, scale.y, scale.z)
+            data.scale = Vector3([scale.x, scale.y, scale.z])
             data.timeStamp = timeStamp
             self.m_Scales.append(data)
 
@@ -97,19 +96,19 @@ class Bone:
 
     def InterpolatePosition(self, animationTime):
         if self.m_NumPositions == 1:
-            return translate(glm.mat4(1.0), self.m_Positions[0].position)
+            return Matrix44.from_translation(self.m_Positions[0].position)
         
         p0Index = self.GetPositionIndex(animationTime)
         p1Index = p0Index + 1
         scaleFactor = self.GetScaleFactor(self.m_Positions[p0Index].timeStamp,
             self.m_Positions[p1Index].timeStamp, animationTime)
         finalPosition = mix(self.m_Positions[p0Index].position, self.m_Positions[p1Index].position, scaleFactor)
-        return translate(glm.mat4(1.0), finalPosition)
+        return Matrix44.from_translation(finalPosition)
 
     def InterpolateRotation(self, animationTime):
         if self.m_NumRotations == 1:
             rotation = quat_normalize(self.m_Rotations[0].orientation)
-            return toMat4(rotation)
+            return Matrix44.from_quaternion(rotation)
         
         p0Index = self.GetRotationIndex(animationTime)
         p1Index = p0Index + 1
@@ -117,15 +116,15 @@ class Bone:
             self.m_Rotations[p1Index].timeStamp, animationTime)
         finalRotation = quat_slerp(self.m_Rotations[p0Index].orientation, self.m_Rotations[p1Index].orientation, scaleFactor)
         finalRotation = quat_normalize(finalRotation)
-        return toMat4(finalRotation)
+        return Matrix44.from_quaternion(finalRotation)
 
     def InterpolateScaling(self, animationTime):
         if self.m_NumScalings == 1:
-            return glm.scale(glm.mat4(1.0), self.m_Scales[0].scale)
+            return Matrix44.from_scale(self.m_Scales[0].scale)
         
         p0Index = self.GetScaleIndex(animationTime)
         p1Index = p0Index + 1
         scaleFactor = self.GetScaleFactor(self.m_Scales[p0Index].timeStamp,
             self.m_Scales[p1Index].timeStamp, animationTime)
         finalScale = mix(self.m_Scales[p0Index].scale, self.m_Scales[p1Index].scale, scaleFactor)
-        return glm.scale(glm.mat4(1.0), finalScale)
+        return Matrix44.from_scale(finalScale)

@@ -1,14 +1,14 @@
-import glm
-import assimp
+import pyrr
+import pyassimp
 import Bone
-import AssimpGLMHelpers
+import AssimpPyrrHelpers
 from model_animation import Model
 from typing import Dict
 from animdata import BoneInfo
 
 class AssimpNodeData:
     def __init__(self):
-        self.transformation = glm.mat4(1.0)
+        self.transformation = pyrr.Matrix44.identity()
         self.name = ""
         self.childrenCount = 0
         self.children = []
@@ -21,8 +21,8 @@ class Animation:
         self.m_RootNode = AssimpNodeData()
         self.m_BoneInfoMap = {}
         
-        importer = assimp.Importer()
-        scene = importer.ReadFile(animationPath, assimp.aiProcess_Triangulate)
+        importer = pyassimp.AssimpImporter()
+        scene = importer.ReadFile(animationPath, pyassimp.aiProcess_Triangulate)
         assert scene and scene.mRootNode
         animation = scene.mAnimations[0]
         self.m_Duration = animation.mDuration
@@ -65,11 +65,11 @@ class Animation:
 
         self.m_BoneInfoMap = boneInfoMap
 
-    def ReadHierarchyData(self, dest: AssimpNodeData, src: assimp.aiNode):
+    def ReadHierarchyData(self, dest: AssimpNodeData, src: pyassimp.Node):
         assert src
 
         dest.name = src.mName.data.decode('utf-8')
-        dest.transformation = AssimpGLMHelpers.ConvertMatrixToGLMFormat(src.mTransformation)
+        dest.transformation = AssimpPyrrHelpers.ConvertMatrixToPyrrFormat(src.mTransformation)
         dest.childrenCount = src.mNumChildren
 
         for i in range(src.mNumChildren):

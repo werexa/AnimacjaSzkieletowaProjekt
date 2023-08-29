@@ -1,11 +1,12 @@
-import glm
+import pyrr
+from pyrr import Matrix44, Vector3
 
 class Camera:
-    def __init__(self, position=glm.vec3(0.0, 0.0, 0.0), up=glm.vec3(0.0, 1.0, 0.0), yaw=-90.0, pitch=0.0):
+    def __init__(self, position=Vector3([0.0, 0.0, 0.0]), up=Vector3([0.0, 1.0, 0.0]), yaw=-90.0, pitch=0.0):
         self.position = position
-        self.front = glm.vec3(0.0, 0.0, -1.0)
+        self.front = Vector3([0.0, 0.0, -1.0])
         self.up = up
-        self.right = glm.vec3(0.0)
+        self.right = Vector3([0.0])
         self.world_up = up
         self.yaw = yaw
         self.pitch = pitch
@@ -15,7 +16,7 @@ class Camera:
         self.update_camera_vectors()
 
     def get_view_matrix(self):
-        return glm.lookAt(self.position, self.position + self.front, self.up)
+        return Matrix44.look_at(self.position, self.position + self.front, self.up)
 
     def process_keyboard(self, direction, delta_time):
         velocity = self.movement_speed * delta_time
@@ -51,17 +52,17 @@ class Camera:
             self.zoom = 45.0
 
     def update_camera_vectors(self):
-        front = glm.vec3()
-        front.x = glm.cos(glm.radians(self.yaw)) * glm.cos(glm.radians(self.pitch))
-        front.y = glm.sin(glm.radians(self.pitch))
-        front.z = glm.sin(glm.radians(self.yaw)) * glm.cos(glm.radians(self.pitch))
-        self.front = glm.normalize(front)
-        self.right = glm.normalize(glm.cross(self.front, self.world_up))
-        self.up = glm.normalize(glm.cross(self.right, self.front))
+        front = Vector3()
+        front.x = pyrr.cos(pyrr.radians(self.yaw)) * pyrr.cos(pyrr.radians(self.pitch))
+        front.y = pyrr.sin(pyrr.radians(self.pitch))
+        front.z = pyrr.sin(pyrr.radians(self.yaw)) * pyrr.cos(pyrr.radians(self.pitch))
+        self.front = pyrr.normalize(front)
+        self.right = pyrr.normalize(pyrr.cross(self.front, self.world_up))
+        self.up = pyrr.normalize(pyrr.cross(self.right, self.front))
 
 # Example usage
 if __name__ == "__main__":
-    camera = Camera(glm.vec3(0.0, 0.0, 3.0))
+    camera = Camera(Vector3([0.0, 0.0, 3.0]))
     view_matrix = camera.get_view_matrix()
     print(view_matrix)
     # Process input and camera updates go here
