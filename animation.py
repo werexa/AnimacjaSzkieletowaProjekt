@@ -1,7 +1,5 @@
+import bpy
 import pyrr
-import pyassimp
-import Bone
-import AssimpPyrrHelpers
 from model_animation import Model
 from typing import Dict
 from animdata import BoneInfo
@@ -14,22 +12,21 @@ class AssimpNodeData:
         self.children = []
 
 class Animation:
-    def __init__(self, animationPath: str, model: Model):
+    def __init__(self, animationPath, model: Model):
         self.m_Duration = 0.0
         self.m_TicksPerSecond = 0.0
         self.m_Bones = []
         self.m_RootNode = AssimpNodeData()
         self.m_BoneInfoMap = {}
         
-        importer = pyassimp.AssimpImporter()
-        scene = importer.ReadFile(animationPath, pyassimp.aiProcess_Triangulate)
-        assert scene and scene.mRootNode
-        animation = scene.mAnimations[0]
-        self.m_Duration = animation.mDuration
-        self.m_TicksPerSecond = animation.mTicksPerSecond
-        globalTransformation = scene.mRootNode.mTransformation
-        globalTransformation = globalTransformation.Inverse()
-        self.ReadHierarchyData(self.m_RootNode, scene.mRootNode)
+        bpy.ops.wm.open_mainfile(filepath=str(animationPath))
+        bpy_scene = bpy.context.scene
+        animation = bpy_scene.animation_data.action
+        self.m_Duration = animation.frame_range[1] - animation.frame_range[0] + 1
+        self.m_TicksPerSecond = bpy_scene.render.fps
+        globalTransformation = pyrr.Matrix44.from_matrix3(bpy_scene.world, dtype='f4')
+        globalTransformation = globalTransformation.inverse
+        self.ReadHierarchyData(self.m_RootNode, bpy_scene.objects[0])
         self.ReadMissingBones(animation, model)
     
     def FindBone(self, name: str):
@@ -49,30 +46,30 @@ class Animation:
         return self.m_BoneInfoMap
 
     def ReadMissingBones(self, animation, model):
-        size = animation.mNumChannels
+        size = len(animation.fcurves)
         boneInfoMap = model.GetBoneInfoMap()
         boneCount = model.GetBoneCount()
 
         for i in range(size):
-            channel = animation.mChannels[i]
-            boneName = channel.mNodeName.data.decode('utf-8')
+            channel = animation.fcurves[i]
+            boneName = channel.data_path.split('"')[1]
 
             if boneName not in boneInfoMap:
                 boneInfoMap[boneName].id = boneCount
                 boneCount += 1
-            self.m_Bones.append(Bone(channel.mNodeName.data.decode('utf-8'),
-                boneInfoMap[channel.mNodeName.data.decode('utf-8')].id, channel))
+            self.m_Bones.append(Bone(boneName,
+                boneInfoMap[boneName].id, channel))
 
         self.m_BoneInfoMap = boneInfoMap
 
-    def ReadHierarchyData(self, dest: AssimpNodeData, src: pyassimp.Node):
+    def ReadHierarchyData(self, dest: AssimpNodeData, src: bpy.types.Object):
         assert src
 
-        dest.name = src.mName.data.decode('utf-8')
-        dest.transformation = AssimpPyrrHelpers.ConvertMatrixToPyrrFormat(src.mTransformation)
-        dest.childrenCount = src.mNumChildren
+        dest.name = src.name
+        dest.transformation = pyrr.Matrix44.from_matrix3(src.matrix_world, dtype='f4')
+        dest.childrenCount = len(src.children)
 
-        for i in range(src.mNumChildren):
+        for child in src.children:
             newData = AssimpNodeData()
-            self.ReadHierarchyData(newData, src.mChildren[i])
+            self.ReadHierarchyData(newData, child)
             dest.children.append(newData)

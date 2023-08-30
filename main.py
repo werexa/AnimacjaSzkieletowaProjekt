@@ -1,8 +1,8 @@
 import glfw
 import pyrr
-import Shader
-import Animator
-import Animation
+from shader import Shader
+from animator import Animator
+from animation import Animation
 import model_animation as ma
 import numpy as np
 import pathlib
@@ -135,8 +135,8 @@ def main():
 
     outShader = Shader("anim_model.vs", "anim_model.fs")
 
-    ourModel = ma.Model(pathlib.Path("resources/objects/vampire/dancing_vampire.dae"))
-    danceAnimation = Animation(pathlib.Path("resources/objects/vampire/dancing_vampire.dae"),ourModel)
+    ourModel = ma.Model(pathlib.Path("resources/objects/vampire/BASEmodel.blend"))
+    danceAnimation = Animation(pathlib.Path("resources/objects/vampire/BASEmodel.blend"),ourModel)
     animator = Animator(danceAnimation)
     # shader_program = compileProgram(
     #     compileShader(vertex_shader, GL_VERTEX_SHADER),

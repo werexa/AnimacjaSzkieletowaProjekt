@@ -1,6 +1,4 @@
 import pyrr
-import pyassimp
-
 
 class AssimpPyrrHelpers:
     @staticmethod

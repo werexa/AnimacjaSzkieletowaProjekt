@@ -1,6 +1,6 @@
 import pyrr
 from typing import List, Dict
-import Bone  # Import Bone class if available
+from bone import Bone  # Import Bone class if available
 
 class Animator:
     def __init__(self, animation):

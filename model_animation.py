@@ -1,12 +1,8 @@
+import bpy
 import os
 from pathlib import Path
 import pyrr
-import pyassimp
-from pyassimp.postprocess import (
-    aiProcess_Triangulate,
-    aiProcess_GenSmoothNormals,
-    aiProcess_CalcTangentSpace,
-)
+# from bpy_extras.image_utils import load_image
 from OpenGL.GL import glGenTextures, glBindTexture, glTexImage2D, glGenerateMipmap, GL_TEXTURE_2D, GL_RGBA, GL_UNSIGNED_BYTE
 
 MAX_BONE_INFLUENCE = 4
@@ -33,9 +29,9 @@ class BoneInfo:
 
 class Vertex:
     def __init__(self):
-        self.Position = pyrr.Vector3([0.0])
-        self.Normal = pyrr.Vector3([0.0])
-        self.TexCoords = pyrr.Vector2([0.0])
+        self.Position = pyrr.Vector3([0.0, 0.0, 0.0])  # Replace [0.0, 0.0, 0.0] with the desired coordinates
+        self.Normal = pyrr.Vector3([0.0, 0.0, 0.0])
+        self.TexCoords = (0.0,0.0)
         self.m_BoneIDs = [-1] * MAX_BONE_INFLUENCE
         self.m_Weights = [0.0] * MAX_BONE_INFLUENCE
 
@@ -63,16 +59,20 @@ class Model:
         self.load_model(path)
 
     def load_model(self, path):
-        scene = pyassimp.load(path, processing=(aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace))
-        self.process_node(scene.rootnode, scene)
-        pyassimp.release(scene)
+        # bpy.ops.import_scene.fbx(filepath=str(path))
+        bpy.ops.wm.collada_import(filepath=str(path))
+        bpy_scene = bpy.context.scene
+        self.process_node(bpy_scene.objects[0], bpy_scene)
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy_scene.objects[0].select_set(True)
+        bpy.ops.object.delete()
 
-    def process_node(self, node, scene):
-        for mesh_index in node.meshes:
-            mesh = scene.meshes[mesh_index]
+    def process_node(self, obj, scene):
+        if obj.type == 'MESH':
+            mesh = obj.data
             self.meshes.append(self.process_mesh(mesh, scene))
 
-        for child in node.children:
+        for child in obj.children:
             self.process_node(child, scene)
 
     def set_vertex_bone_data_to_default(self, vertex):
@@ -88,54 +88,38 @@ class Model:
                 break
 
     def extract_bone_weight_for_vertices(self, vertices, mesh, scene):
-        for boneIndex in range(mesh.num_bones):
-            bone = mesh.bones[boneIndex]
-            boneName = bone.name
-            if boneName not in self.m_BoneInfoMap:
-                newBoneInfo = BoneInfo()
-                newBoneInfo.id = self.m_BoneCounter
-                newBoneInfo.offset = pyrr.Matrix44(bone.offset_matrix)
-                self.m_BoneInfoMap[boneName] = newBoneInfo
-                boneID = self.m_BoneCounter
-                self.m_BoneCounter += 1
-            else:
-                boneID = self.m_BoneInfoMap[boneName].id
+        for vertex in mesh.vertices:
+            for group in vertex.groups:
+                boneIndex = group.group
+                weight = group.weight
+                boneName = scene.objects[scene.objects.active.data.bones[boneIndex].name].name
+                if boneName not in self.m_BoneInfoMap:
+                    newBoneInfo = BoneInfo()
+                    newBoneInfo.id = self.m_BoneCounter
+                    newBoneInfo.offset = pyrr.Matrix44(scene.objects.active.data.bones[boneIndex].matrix_local)
+                    self.m_BoneInfoMap[boneName] = newBoneInfo
+                    boneID = self.m_BoneCounter
+                    self.m_BoneCounter += 1
+                else:
+                    boneID = self.m_BoneInfoMap[boneName].id
 
-            for weight in bone.weights:
-                vertexId = weight.vertex_id
-                vertex = vertices[vertexId]
-                self.set_vertex_bone_data(vertex, boneID, weight.weight)
+                self.set_vertex_bone_data(vertices[group.index], boneID, weight)
 
     def process_mesh(self, mesh, scene):
         vertices = []
         indices = []
         textures = []
 
-        for i in range(mesh.num_vertices):
-            vertex = Vertex()
-            self.set_vertex_bone_data_to_default(vertex)
-            vertex.Position = pyrr.Vector3(mesh.vertices[i])
-            vertex.Normal = pyrr.Vector3(mesh.normals[i])
+        for vertex in mesh.vertices:
+            new_vertex = Vertex()
+            self.set_vertex_bone_data_to_default(new_vertex)
+            new_vertex.Position = pyrr.Vector3(vertex.co)
+            new_vertex.Normal = pyrr.Vector3(vertex.normal)
+            new_vertex.TexCoords = (0.0,0.0)
+            vertices.append(new_vertex)
 
-            if mesh.texturecoords:
-                vertex.TexCoords = pyrr.Vector2(mesh.texturecoords[0][i][:2])
-            else:
-                vertex.TexCoords = pyrr.Vector2([0.0, 0.0])
-
-            vertices.append(vertex)
-
-        for face in mesh.faces:
-            indices.extend(face.indices)
-
-        material = scene.materials[mesh.materialindex]
-        diffuse_maps = self.load_material_textures(material, 'texture_diffuse', 'aiTextureType_DIFFUSE')
-        textures.extend(diffuse_maps)
-        specular_maps = self.load_material_textures(material, 'texture_specular', 'aiTextureType_SPECULAR')
-        textures.extend(specular_maps)
-        normal_maps = self.load_material_textures(material, 'texture_normal', 'aiTextureType_HEIGHT')
-        textures.extend(normal_maps)
-        height_maps = self.load_material_textures(material, 'texture_height', 'aiTextureType_AMBIENT')
-        textures.extend(height_maps)
+        for polygon in mesh.polygons:
+            indices.extend(polygon.vertices)
 
         self.extract_bone_weight_for_vertices(vertices, mesh, scene)
 
@@ -161,11 +145,10 @@ class Model:
         texture_id = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, texture_id)
 
-        image = pyassimp.load_image(filename)
-        if image is not None:
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.shape[1], image.shape[0], 0, GL_RGBA, GL_UNSIGNED_BYTE, image)
+        image = bpy.data.images.load(filename)
+        if image:
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.size[0], image.size[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, image.pixels)
             glGenerateMipmap(GL_TEXTURE_2D)
-            pyassimp.release(image)
         else:
             print(f"Texture failed to load at path: {filename}")
 
