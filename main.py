@@ -135,8 +135,8 @@ def main():
 
     outShader = Shader("anim_model.vs", "anim_model.fs")
 
-    ourModel = ma.Model(pathlib.Path("resources/objects/vampire/BASEmodel.blend"))
-    danceAnimation = Animation(pathlib.Path("resources/objects/vampire/BASEmodel.blend"),ourModel)
+    ourModel = ma.Model(pathlib.Path("resources/objects/vampire/_dancing_vampire.blend"))
+    danceAnimation = Animation(pathlib.Path("resources/objects/vampire/dancing_vampire.dae"),ourModel)
     animator = Animator(danceAnimation)
     # shader_program = compileProgram(
     #     compileShader(vertex_shader, GL_VERTEX_SHADER),

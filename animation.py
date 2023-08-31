@@ -1,8 +1,9 @@
-import bpy
+from collada import Collada 
 import pyrr
 from model_animation import Model
 from typing import Dict
 from animdata import BoneInfo
+from bone import Bone
 
 class AssimpNodeData:
     def __init__(self):
@@ -19,14 +20,13 @@ class Animation:
         self.m_RootNode = AssimpNodeData()
         self.m_BoneInfoMap = {}
         
-        bpy.ops.wm.open_mainfile(filepath=str(animationPath))
-        bpy_scene = bpy.context.scene
-        animation = bpy_scene.animation_data.action
-        self.m_Duration = animation.frame_range[1] - animation.frame_range[0] + 1
-        self.m_TicksPerSecond = bpy_scene.render.fps
-        globalTransformation = pyrr.Matrix44.from_matrix3(bpy_scene.world, dtype='f4')
+        collada = Collada(str(animationPath))
+        animation = collada.animations[0]
+        self.m_Duration = animation.duration
+        self.m_TicksPerSecond = animation.fps
+        globalTransformation = pyrr.Matrix44.from_matrix3(collada.assetInfo.up_axis_matrix, dtype='f4')
         globalTransformation = globalTransformation.inverse
-        self.ReadHierarchyData(self.m_RootNode, bpy_scene.objects[0])
+        self.ReadHierarchyData(self.m_RootNode, collada.scenes[0].nodes[0])
         self.ReadMissingBones(animation, model)
     
     def FindBone(self, name: str):
@@ -46,13 +46,13 @@ class Animation:
         return self.m_BoneInfoMap
 
     def ReadMissingBones(self, animation, model):
-        size = len(animation.fcurves)
+        size = len(animation.sourceById)
         boneInfoMap = model.GetBoneInfoMap()
         boneCount = model.GetBoneCount()
 
         for i in range(size):
-            channel = animation.fcurves[i]
-            boneName = channel.data_path.split('"')[1]
+            channel = animation.sourceById[i]
+            boneName = channel.id.split('/')[-1]
 
             if boneName not in boneInfoMap:
                 boneInfoMap[boneName].id = boneCount
@@ -62,11 +62,11 @@ class Animation:
 
         self.m_BoneInfoMap = boneInfoMap
 
-    def ReadHierarchyData(self, dest: AssimpNodeData, src: bpy.types.Object):
+    def ReadHierarchyData(self, dest: AssimpNodeData, src):
         assert src
 
-        dest.name = src.name
-        dest.transformation = pyrr.Matrix44.from_matrix3(src.matrix_world, dtype='f4')
+        dest.name = src.original.name
+        dest.transformation = pyrr.Matrix44.from_matrix3(src.matrix, dtype='f4')
         dest.childrenCount = len(src.children)
 
         for child in src.children:

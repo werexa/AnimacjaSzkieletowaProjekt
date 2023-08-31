@@ -59,13 +59,14 @@ class Model:
         self.load_model(path)
 
     def load_model(self, path):
-        # bpy.ops.import_scene.fbx(filepath=str(path))
-        bpy.ops.wm.collada_import(filepath=str(path))
+        bpy.ops.wm.open_mainfile(filepath=str(path))
         bpy_scene = bpy.context.scene
+        a = bpy_scene.objects[0]
         self.process_node(bpy_scene.objects[0], bpy_scene)
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy_scene.objects[0].select_set(True)
-        bpy.ops.object.delete()
+        # bpy.ops.object.mode_set(mode='EDIT')
+        # bpy.ops.object.select_all(action='DESELECT')
+        # bpy_scene.objects[0].select_set(True)
+        # bpy.ops.object.delete()
 
     def process_node(self, obj, scene):
         if obj.type == 'MESH':
